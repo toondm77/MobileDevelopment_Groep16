@@ -1,2 +1,2 @@
-##Groep 16##
-##Toon De Meyer##
+Groep 16
+Toon De Meyer
