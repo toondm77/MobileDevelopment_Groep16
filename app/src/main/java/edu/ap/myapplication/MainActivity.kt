@@ -1,6 +1,6 @@
 package edu.ap.myapplication
 
-import NotificationsScreen
+import edu.ap.myapplication.ui.components.NotificationsScreen
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
