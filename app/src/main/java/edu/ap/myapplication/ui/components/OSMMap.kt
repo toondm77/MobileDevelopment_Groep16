@@ -14,7 +14,8 @@ import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import java.util.Locale
-
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 
 @Composable
 fun OSMMap(
@@ -22,21 +23,28 @@ fun OSMMap(
     modifier: Modifier = Modifier,
     currentLat: Double?,
     currentLng: Double?,
-    calculateDistance: (Double, Double, Double, Double) -> Float
+    calculateDistance: (Double, Double, Double, Double) -> Float,
+    fixedHeightDp: Dp = 220.dp
 ) {
     val context = LocalContext.current
 
     AndroidView(
         factory = { ctx ->
             Configuration.getInstance().userAgentValue = ctx.packageName
-            MapView(ctx).apply {
+            val map = MapView(ctx).apply {
                 setTileSource(TileSourceFactory.MAPNIK)
                 setMultiTouchControls(true)
                 this.zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
             }
+            val heightPx = (fixedHeightDp.value * ctx.resources.displayMetrics.density).toInt()
+            map.layoutParams = android.view.ViewGroup.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, heightPx)
+            map
         },
         modifier = modifier,
         update = { mapView ->
+            val heightPx = (fixedHeightDp.value * mapView.context.resources.displayMetrics.density).toInt()
+            mapView.layoutParams = android.view.ViewGroup.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, heightPx)
+
             val overlays = mapView.overlays
             overlays.clear()
 
@@ -102,4 +110,3 @@ fun OSMMap(
         }
     )
 }
-

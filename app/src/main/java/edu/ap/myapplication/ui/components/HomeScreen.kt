@@ -83,7 +83,6 @@ fun HomeScreen(onOpenDetail: (CityTrip) -> Unit = {}) {
     var selectedCity by remember { mutableStateOf("All") }
     var selectedCountry by remember { mutableStateOf("All") }
 
-    // State voor huidige locatie
     val context = LocalContext.current
     val fused = remember { LocationServices.getFusedLocationProviderClient(context) }
     var currentLat by remember { mutableStateOf<Double?>(null) }
@@ -260,15 +259,16 @@ fun HomeScreen(onOpenDetail: (CityTrip) -> Unit = {}) {
             }
         }
 
+        OSMMap(trips = trips, modifier = Modifier.fillMaxWidth().height(220.dp), currentLat = currentLat, currentLng = currentLng, calculateDistance = ::calculateDistance)
+
         if (trips.isEmpty()) {
             val hasData = allTrips.isNotEmpty()
-            Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                 Text(if (hasData) "No results for selected filters" else "No city trips found")
             }
-            return
         }
 
-        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp)) {
+        LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp)) {
             items(trips) { city ->
                 Card(
                     modifier = Modifier
