@@ -35,16 +35,12 @@ fun OSMMap(
                 setTileSource(TileSourceFactory.MAPNIK)
                 setMultiTouchControls(true)
                 this.zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
+                setTilesScaledToDpi(true)
             }
-            val heightPx = (fixedHeightDp.value * ctx.resources.displayMetrics.density).toInt()
-            map.layoutParams = android.view.ViewGroup.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, heightPx)
             map
         },
         modifier = modifier,
         update = { mapView ->
-            val heightPx = (fixedHeightDp.value * mapView.context.resources.displayMetrics.density).toInt()
-            mapView.layoutParams = android.view.ViewGroup.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, heightPx)
-
             val overlays = mapView.overlays
             overlays.clear()
 

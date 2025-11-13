@@ -30,6 +30,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -48,6 +49,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -79,6 +81,8 @@ fun calculateDistance(lat1: Double, lng1: Double, lat2: Double, lng2: Double): F
 fun HomeScreen(onOpenDetail: (CityTrip) -> Unit = {}) {
     val allTrips = remember { mutableStateListOf<CityTrip>() }
     val trips = remember { mutableStateListOf<CityTrip>() }
+
+    val cityNames = remember { mutableStateListOf<String>() }
 
     var selectedCity by remember { mutableStateOf("All") }
     var selectedCountry by remember { mutableStateOf("All") }
@@ -126,6 +130,22 @@ fun HomeScreen(onOpenDetail: (CityTrip) -> Unit = {}) {
     }
 
     val isRefreshing = remember { mutableStateOf(false) }
+
+    fun fetchCityNames() {
+        FirebaseFirestore.getInstance()
+            .collection("cities")
+            .get()
+            .addOnSuccessListener { snapshot ->
+                cityNames.clear()
+                val names = snapshot.documents.mapNotNull { it.getString("name")?.trim() }
+                    .filter { it.isNotBlank() }
+                cityNames.addAll(names.distinct().sorted())
+            }
+            .addOnFailureListener { e ->
+                Log.w(TAG, "Failed to fetch city names: ${e.message}", e)
+            }
+    }
+
     val fetchOnce: () -> Unit = {
         isRefreshing.value = true
         FirebaseFirestore.getInstance()
@@ -140,6 +160,7 @@ fun HomeScreen(onOpenDetail: (CityTrip) -> Unit = {}) {
                     } catch (_: Throwable) { }
                 }
                 applyFilter()
+                fetchCityNames()
             }
             .addOnFailureListener { e ->
                 Log.w(TAG, "Manual fetch failed from citytrips: ${e.message}", e)
@@ -200,7 +221,11 @@ fun HomeScreen(onOpenDetail: (CityTrip) -> Unit = {}) {
         onDispose { listener.remove() }
     }
 
-    val cityOptions = listOf("All") + allTrips.map { it.city }.filter { it.isNotBlank() }.distinct().sorted()
+    androidx.compose.runtime.LaunchedEffect(true) {
+        fetchCityNames()
+    }
+
+    val cityOptions = listOf("All") + (allTrips.map { it.city } + cityNames).filter { it.isNotBlank() }.distinct().sorted()
     val countryOptions = listOf("All") + allTrips.map { it.country }.filter { it.isNotBlank() }.distinct().sorted()
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -216,7 +241,7 @@ fun HomeScreen(onOpenDetail: (CityTrip) -> Unit = {}) {
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = cityExpanded) },
                         modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth()
                     )
-                    ExposedDropdownMenu(expanded = cityExpanded, onDismissRequest = { cityExpanded = false }) {
+                    DropdownMenu(expanded = cityExpanded, onDismissRequest = { cityExpanded = false }) {
                         cityOptions.forEach { option ->
                             DropdownMenuItem(text = { Text(if (option == "All") "All cities" else option) }, onClick = {
                                 selectedCity = option
@@ -238,7 +263,7 @@ fun HomeScreen(onOpenDetail: (CityTrip) -> Unit = {}) {
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = countryExpanded) },
                         modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth()
                     )
-                    ExposedDropdownMenu(expanded = countryExpanded, onDismissRequest = { countryExpanded = false }) {
+                    DropdownMenu(expanded = countryExpanded, onDismissRequest = { countryExpanded = false }) {
                         countryOptions.forEach { option ->
                             DropdownMenuItem(text = { Text(if (option == "All") "All countries" else option) }, onClick = {
                                 selectedCountry = option
@@ -259,7 +284,23 @@ fun HomeScreen(onOpenDetail: (CityTrip) -> Unit = {}) {
             }
         }
 
-        OSMMap(trips = trips, modifier = Modifier.fillMaxWidth().height(220.dp), currentLat = currentLat, currentLng = currentLng, calculateDistance = ::calculateDistance)
+        androidx.compose.material3.Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp)
+                .padding(horizontal = 8.dp)
+                .clip(RoundedCornerShape(8.dp)),
+            tonalElevation = 0.dp,
+            shadowElevation = 0.dp
+        ) {
+            OSMMap(
+                trips = trips,
+                modifier = Modifier.fillMaxSize(),
+                currentLat = currentLat,
+                currentLng = currentLng,
+                calculateDistance = ::calculateDistance
+            )
+        }
 
         if (trips.isEmpty()) {
             val hasData = allTrips.isNotEmpty()
@@ -328,7 +369,6 @@ fun CityDetailScreen(city: CityTrip?, onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val reviews = remember { mutableStateListOf<Review>() }
 
-    // obtain current device location for inline distance display
     val fused = remember { LocationServices.getFusedLocationProviderClient(context) }
     var currentLat by remember { mutableStateOf<Double?>(null) }
     var currentLng by remember { mutableStateOf<Double?>(null) }
@@ -382,7 +422,6 @@ fun CityDetailScreen(city: CityTrip?, onBack: () -> Unit = {}) {
                             reviews.add(Review(idx.toString(), userId, username, rating, comment))
                         }
                     } else {
-                        // fallback to subcollection
                         db.collection("citytrips").document(city.id).collection("reviews")
                             .get()
                             .addOnSuccessListener { snap2 ->
@@ -421,7 +460,6 @@ fun CityDetailScreen(city: CityTrip?, onBack: () -> Unit = {}) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Inline distance: show under the image (only when city coordinates and current location are available)
         val cityLat = city.latitude
         val cityLng = city.longitude
         if (cityLat != null && cityLng != null && currentLat != null && currentLng != null) {
@@ -454,7 +492,6 @@ fun CityDetailScreen(city: CityTrip?, onBack: () -> Unit = {}) {
                     if (r.comment.isNotBlank()) {
                         Text(r.comment)
                     }
-                    // username may be null, show if present
                     if (!r.username.isNullOrBlank()) {
                         Text(r.username, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -494,7 +531,6 @@ fun CityDetailScreen(city: CityTrip?, onBack: () -> Unit = {}) {
 
             val db = FirebaseFirestore.getInstance()
             val username = user.displayName ?: user.email ?: "Anonymous"
-            // avoid sentinel values inside array elements
             val reviewObj = hashMapOf<String, Any>(
                 "username" to username,
                 "userId" to user.uid,
