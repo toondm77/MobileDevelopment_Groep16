@@ -49,7 +49,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import edu.ap.myapplication.model.CityTrip
 
-private const val TAG = "HomeScreen"
+const val TAG = "HomeScreen"
 
 sealed class BottomNavScreen(val route: String, val label: String, val icon: ImageVector) {
     object Home : BottomNavScreen("home", "Home", Icons.Filled.Home)
