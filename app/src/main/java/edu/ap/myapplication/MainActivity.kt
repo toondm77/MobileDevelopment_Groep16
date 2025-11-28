@@ -1,6 +1,7 @@
 package edu.ap.myapplication
 
 import edu.ap.myapplication.ui.components.NotificationsScreen
+import edu.ap.myapplication.ui.components.MessagesScreen
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -31,6 +32,7 @@ import androidx.compose.ui.Modifier
 import edu.ap.myapplication.ui.components.LoginScreen
 import edu.ap.myapplication.model.CityTrip
 import edu.ap.myapplication.ui.components.HomeScreen
+import edu.ap.myapplication.ui.components.RegisterScreen
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -40,48 +42,69 @@ class MainActivity : ComponentActivity() {
         setContent {
             MyApplicationTheme {
                 var isLoggedIn by rememberSaveable { mutableStateOf(false) }
+                var showRegister by rememberSaveable { mutableStateOf(false) }
                 var currentRoute by rememberSaveable { mutableStateOf(BottomNavScreen.Home.route) }
                 val selectedCity = remember { mutableStateOf<CityTrip?>(null) }
 
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    topBar = {
-                        if (currentRoute == BottomNavScreen.Home.route) {
-                            TopAppBar(
-                                title = { Text("Location recommendations") },
-                                actions = {
-                                    IconButton(onClick = { currentRoute = "notifications" }) {
-                                        Icon(Icons.Filled.Notifications, contentDescription = "Notifications")
+                if (!isLoggedIn) {
+                    if (showRegister) {
+                        RegisterScreen(
+                            onRegistered = {
+                                isLoggedIn = true
+                                showRegister = false
+                            },
+                            onBackToLogin = {
+                                showRegister = false
+                            }
+                        )
+                    } else {
+                        LoginScreen(
+                            onLogin = {
+                                isLoggedIn = true
+                            },
+                            onSkip = {
+                                isLoggedIn = true
+                            },
+                            onCreateAccount = {
+                                showRegister = true
+                            }
+                        )
+                    }
+                } else {
+                    Scaffold(
+                        modifier = Modifier.fillMaxSize(),
+                        topBar = {
+                            if (currentRoute == BottomNavScreen.Home.route) {
+                                TopAppBar(
+                                    title = { Text("Location recommendations") },
+                                    actions = {
+                                        IconButton(onClick = { currentRoute = "notifications" }) {
+                                            Icon(Icons.Filled.Notifications, contentDescription = "Notifications")
+                                        }
                                     }
+                                )
+                            }
+                        },
+                        bottomBar = {
+                            if (currentRoute != "notifications") {
+                                BottomNavBar(currentRoute = currentRoute) { route ->
+                                    currentRoute = route
                                 }
-                            )
-                        }
-                    },
-                    bottomBar = {
-                        if (currentRoute != "notifications") {
-                            BottomNavBar(currentRoute = currentRoute) { route ->
-                                currentRoute = route
                             }
                         }
-                    }
-                ) { innerPadding ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                    ) {
-                        if (!isLoggedIn) {
-                            LoginScreen(
-                                onLogin = { isLoggedIn = true },
-                                onSkip = { isLoggedIn = true }
-                            )
-                        } else {
+                    ) { innerPadding ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding)
+                        ) {
                             when (currentRoute) {
                                 BottomNavScreen.Home.route -> HomeScreen(onOpenDetail = { city ->
                                     selectedCity.value = city
-                                    currentRoute = "detail"
+                                    currentRoute = "cityDetail"
                                 })
                                 BottomNavScreen.Map.route -> MapScreen()
+                                BottomNavScreen.Messages.route -> MessagesScreen()
                                 BottomNavScreen.Profile.route -> ProfileScreen(
                                     onLogout = {
                                         isLoggedIn = false
@@ -91,7 +114,7 @@ class MainActivity : ComponentActivity() {
                                 "notifications" -> NotificationsScreen(
                                     onBack = { currentRoute = BottomNavScreen.Home.route }
                                 )
-                                "detail" -> CityDetailScreen(selectedCity.value, onBack = {
+                                "cityDetail" -> CityDetailScreen(selectedCity.value, onBack = {
                                     selectedCity.value = null
                                     currentRoute = BottomNavScreen.Home.route
                                 })

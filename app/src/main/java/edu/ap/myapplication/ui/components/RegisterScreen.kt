@@ -1,4 +1,3 @@
-// 'app/src/main/java/edu/ap/myapplication/ui/components/LoginScreen.kt'
 package edu.ap.myapplication.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
@@ -25,33 +24,60 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
-fun LoginScreen(
-    onLogin: () -> Unit,
-    onSkip: () -> Unit,
-    onCreateAccount: () -> Unit
+fun RegisterScreen(
+    onRegistered: () -> Unit,
+    onBackToLogin: () -> Unit
 ) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
+    var confirmPassword by rememberSaveable { mutableStateOf("") }
     var loading by rememberSaveable { mutableStateOf(false) }
     var errorText by rememberSaveable { mutableStateOf<String?>(null) }
 
-    val auth = remember { com.google.firebase.auth.FirebaseAuth.getInstance() }
+    val auth = remember { FirebaseAuth.getInstance() }
+    val db = remember { FirebaseFirestore.getInstance() }
 
-    fun isValid(): Boolean = email.isNotBlank() && password.length >= 6
+    fun isValid(): Boolean =
+        email.isNotBlank() &&
+        password.length >= 6 &&
+        password == confirmPassword
 
-    fun signIn() {
+    fun signUp() {
         if (!isValid() || loading) return
         errorText = null
         loading = true
-        auth.signInWithEmailAndPassword(email.trim(), password)
+        auth.createUserWithEmailAndPassword(email.trim(), password)
             .addOnCompleteListener { task ->
-                loading = false
                 if (task.isSuccessful) {
-                    onLogin()
+                    val firebaseUser = task.result?.user
+                    if (firebaseUser != null) {
+                        val userId = firebaseUser.uid
+                        val name = email.substringBefore('@')
+                        val user = hashMapOf(
+                            "userId" to userId,
+                            "name" to name
+                        )
+                        db.collection("users")
+                            .add(user)
+                            .addOnSuccessListener {
+                                loading = false
+                                onRegistered()
+                            }
+                            .addOnFailureListener { e ->
+                                loading = false
+                                errorText = e.localizedMessage ?: "Failed to save user data."
+                            }
+                    } else {
+                        loading = false
+                        errorText = "Sign up failed: user is null."
+                    }
                 } else {
-                    errorText = task.exception?.localizedMessage ?: "Login failed."
+                    loading = false
+                    errorText = task.exception?.localizedMessage ?: "Sign up failed."
                 }
             }
     }
@@ -63,7 +89,7 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Welcome")
+        Text("Create an account")
         Spacer(Modifier.height(16.dp))
         OutlinedTextField(
             value = email,
@@ -77,6 +103,15 @@ fun LoginScreen(
             value = password,
             onValueChange = { password = it },
             label = { Text("Password (min 6 chars)") },
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            singleLine = true
+        )
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(
+            value = confirmPassword,
+            onValueChange = { confirmPassword = it },
+            label = { Text("Confirm password") },
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             singleLine = true
@@ -97,23 +132,17 @@ fun LoginScreen(
         }
 
         Button(
-            onClick = { signIn() },
+            onClick = { signUp() },
             enabled = isValid() && !loading
         ) {
-            Text("Login")
+            Text("Register")
         }
         Spacer(Modifier.height(8.dp))
         TextButton(
-            onClick = onCreateAccount,
+            onClick = onBackToLogin,
             enabled = !loading
         ) {
-            Text("Create account")
-        }
-        TextButton(
-            onClick = onSkip,
-            enabled = !loading
-        ) {
-            Text("Skip for now")
+            Text("Back to login")
         }
     }
 }

@@ -28,6 +28,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
@@ -54,10 +55,11 @@ const val TAG = "HomeScreen"
 sealed class BottomNavScreen(val route: String, val label: String, val icon: ImageVector) {
     object Home : BottomNavScreen("home", "Home", Icons.Filled.Home)
     object Map : BottomNavScreen("map", "Map", Icons.Filled.Place)
+    object Messages : BottomNavScreen("messages", "Messages", Icons.Filled.Email)
     object Profile : BottomNavScreen("profile", "Profile", Icons.Filled.Person)
 }
 
-private val bottomNavItems = listOf(BottomNavScreen.Home, BottomNavScreen.Map, BottomNavScreen.Profile)
+private val bottomNavItems = listOf(BottomNavScreen.Home, BottomNavScreen.Map, BottomNavScreen.Messages, BottomNavScreen.Profile)
 
 @Composable
 fun BottomNavBar(currentRoute: String, onNavigate: (String) -> Unit) {
@@ -73,4 +75,3 @@ fun BottomNavBar(currentRoute: String, onNavigate: (String) -> Unit) {
         }
     }
 }
-
