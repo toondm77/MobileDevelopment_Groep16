@@ -2,6 +2,7 @@ package edu.ap.myapplication.ui.components
 
 import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -28,16 +29,18 @@ fun OSMMap(
 ) {
     val context = LocalContext.current
 
+    val safeTrips = remember(trips) { trips.filter { it.latitude != null && it.longitude != null } }
+    val limitedTrips = if (safeTrips.size > 300) safeTrips.take(300) else safeTrips
+
     AndroidView(
         factory = { ctx ->
             Configuration.getInstance().userAgentValue = ctx.packageName
-            val map = MapView(ctx).apply {
+            MapView(ctx).apply {
                 setTileSource(TileSourceFactory.MAPNIK)
                 setMultiTouchControls(true)
-                this.zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
+                zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
                 setTilesScaledToDpi(true)
             }
-            map
         },
         modifier = modifier,
         update = { mapView ->
@@ -46,7 +49,7 @@ fun OSMMap(
 
             val markerPoints = mutableListOf<GeoPoint>()
 
-            trips.forEach { trip ->
+            limitedTrips.forEach { trip ->
                 val lat = trip.latitude
                 val lng = trip.longitude
                 if (lat != null && lng != null) {

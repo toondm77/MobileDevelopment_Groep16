@@ -228,6 +228,8 @@ fun HomeScreen(onOpenDetail: (CityTrip) -> Unit = {}) {
     val cityOptions = listOf("All") + (allTrips.map { it.city } + cityNames).filter { it.isNotBlank() }.distinct().sorted()
     val countryOptions = listOf("All") + allTrips.map { it.country }.filter { it.isNotBlank() }.distinct().sorted()
 
+    val hasFilterApplied = selectedCity != "All" || selectedCountry != "All"
+
     Column(modifier = Modifier.fillMaxSize()) {
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f).padding(end = 6.dp)) {
@@ -284,22 +286,26 @@ fun HomeScreen(onOpenDetail: (CityTrip) -> Unit = {}) {
             }
         }
 
-        androidx.compose.material3.Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(220.dp)
-                .padding(horizontal = 8.dp)
-                .clip(RoundedCornerShape(8.dp)),
-            tonalElevation = 0.dp,
-            shadowElevation = 0.dp
-        ) {
-            OSMMap(
-                trips = trips,
-                modifier = Modifier.fillMaxSize(),
-                currentLat = currentLat,
-                currentLng = currentLng,
-                calculateDistance = ::calculateDistance
-            )
+        val mapTrips = trips.filter { it.latitude != null && it.longitude != null }
+
+        if (hasFilterApplied && mapTrips.isNotEmpty()) {
+            androidx.compose.material3.Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .padding(horizontal = 8.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp
+            ) {
+                OSMMap(
+                    trips = mapTrips,
+                    modifier = Modifier.fillMaxSize(),
+                    currentLat = currentLat,
+                    currentLng = currentLng,
+                    calculateDistance = ::calculateDistance
+                )
+            }
         }
 
         if (trips.isEmpty()) {
